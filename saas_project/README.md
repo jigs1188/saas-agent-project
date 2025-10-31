@@ -103,22 +103,3 @@ sudo dpkg -i saas_project/agent/packaging/debian.deb
 
 **After installation, the agent will be available at `/usr/local/bin/saas-agent`.**
 
----
-
-## How to Submit the Project
-
-1.  **Initialize a Git repository:**
-    ```bash
-    git init
-    git add .
-    git commit -m "Initial commit: Complete MVP for SaaS agent assignment"
-    ```
-2.  **Create a GitHub Repository:** Create a new public repository on GitHub (e.g., `saas-agent-project`).
-3.  **Push your code:**
-    ```bash
-    git remote add origin <your-github-repo-url>
-    git branch -M main
-    git push -u origin main
-    ```
-4.  **Share the Link:** Share the GitHub repository link as your submission.
-
