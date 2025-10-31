@@ -51,11 +51,13 @@ def get_installed_packages():
 
 # --- 3. CIS Security Checks ---
 
-def _run_shell_command(command):
-    """A helper to run shell commands and return their output."""
+def _run_shell_command(command, timeout=60):
+    """A helper to run shell commands and return their output with a timeout."""
     try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
         return result.stdout.strip(), result.stderr.strip()
+    except subprocess.TimeoutExpired:
+        return None, f"Command timed out after {timeout} seconds."
     except Exception as e:
         return None, str(e)
 
@@ -104,14 +106,18 @@ def check_apparmor_enabled():
 
 def check_world_writable_files():
     """CIS 6.1.4: Ensure no world-writable files exist."""
-    # This can be slow. For a real agent, you might optimize this or run it less frequently.
-    stdout, _ = _run_shell_command("find / -xdev -type f -perm -0002")
+    # This can be slow. We run it with a timeout.
+    print("Running world-writable file check (30s timeout)...")
+    stdout, stderr = _run_shell_command("find / -xdev -type f -perm -0002", timeout=30)
+
+    if stderr and "timed out" in stderr:
+        return {"check": "CIS 6.1.4 World-Writable Files", "status": "fail", "evidence": "Check timed out after 30 seconds."}
+
     if stdout:
         # Reporting only the first 10 for brevity
         files = "\n".join(stdout.split('\n')[:10])
         return {"check": "CIS 6.1.4 World-Writable Files", "status": "fail", "evidence": f"Found world-writable files, e.g.:\n{files}"}
-    return {"check": "CIS 6.1.4 World-Writable Files", "status": "pass", "evidence": "No world-writable files found."}
-
+    return {"check": "CIS 6.1.4 World-Writable Files", "status": "pass", "evidence": "No world-writable files found in the given time."}
 def check_unused_filesystems():
     """CIS 1.1.1: Ensure mounting of cramfs, squashfs, udf is disabled."""
     disabled_modules = ["cramfs", "squashfs", "udf"]
@@ -153,11 +159,10 @@ def check_gdm_autologin_disabled():
     if not os.path.exists(file_path):
         return {"check": "CIS 6.2.1 GDM Auto-Login", "status": "pass", "evidence": f"GDM not installed or {file_path} not found (pass for servers)."}
         
-    stdout, _ = _run_shell_command(f"grep -E 'AutomaticLoginEnable|AutomaticLogin'")
-    if "true" in stdout.lower():
+    stdout, _ = _run_shell_command(f"grep -Ei 'AutomaticLoginEnable|AutomaticLogin' {file_path}")
+    if stdout and "true" in stdout.lower():
         return {"check": "CIS 6.2.1 GDM Auto-Login", "status": "fail", "evidence": f"Automatic login is enabled in {file_path}."}
     return {"check": "CIS 6.2.1 GDM Auto-Login", "status": "pass", "evidence": "Automatic login is disabled."}
-
 # Additional check of my choice
 def check_sudo_nopasswd():
     """Bonus Check: Ensure no users can use sudo without a password."""
