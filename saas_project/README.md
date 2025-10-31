@@ -1,4 +1,3 @@
-
 # SaaS Security Monitoring Agent & Dashboard
 
 This project is a solution for the Software Engineer assignment. It consists of a Python-based Linux agent that collects system information and a Python FastAPI backend with a simple web frontend to display the data.
@@ -25,6 +24,7 @@ saas_project/
 You will need two terminal windows to run the backend server and the agent simultaneously.
 
 **Prerequisites:**
+
 - Python 3.7+
 - `venv` for creating virtual environments
 - `dpkg-deb` for packaging (available on Debian/Ubuntu)
@@ -97,9 +97,9 @@ dpkg-deb --build packaging/debian
 After running the command, you will find the package `debian.deb` in the `saas_project/agent/packaging/` directory. You can rename it to `saas-security-agent_1.0.0_all.deb` for clarity.
 
 **To install the package (for testing):**
+
 ```bash
 sudo dpkg -i saas_project/agent/packaging/debian.deb
 ```
 
 **After installation, the agent will be available at `/usr/local/bin/saas-agent`.**
-
