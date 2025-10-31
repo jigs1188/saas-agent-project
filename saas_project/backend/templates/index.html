@@ -1,0 +1,32 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; color: #333; }
+        h1 { color: #444; }
+        .container { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #e9e9f3; margin: 0.5em 0; padding: 1em; border-radius: 4px; }
+        a { text-decoration: none; color: #007bff; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Monitored Hosts</h1>
+        {% if hosts %}
+            <ul>
+                {% for host in hosts %}
+                    <li><a href="/hosts/{{ host }}">{{ host }}</a></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hosts have reported data yet. Run an agent to see it here.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

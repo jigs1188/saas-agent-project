@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Details for {{ host.host_details.hostname }}</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; color: #333; }
+        .header { background: #007bff; color: white; padding: 1em 2em; }
+        .header a { color: white; }
+        .container { padding: 2em; }
+        .card { background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 2em; }
+        h1, h2 { color: #444; border-bottom: 2px solid #eee; padding-bottom: 0.3em; }
+        .status-pass { color: #28a745; font-weight: bold; }
+        .status-fail { color: #dc3545; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { padding: 0.8em; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+        pre { background-color: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1><a href="/">&larr; Back to Dashboard</a></h1>
+        <h2>Details for {{ host.host_details.hostname }}</h2>
+    </div>
+
+    <div class="container">
+        <!-- Host Details Card -->
+        <div class="card">
+            <h2>Host Details</h2>
+            <p><strong>OS Type:</strong> {{ host.host_details.os_type }}</p>
+            <p><strong>OS Version:</strong> {{ host.host_details.os_version }}</p>
+        </div>
+
+        <!-- CIS Checks Card -->
+        <div class="card">
+            <h2>CIS Check Results ({{ passed_checks }}/{{ total_checks }} Passed)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Status</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in host.cis_results %}
+                        <tr>
+                            <td>{{ result.check }}</td>
+                            <td><span class="status-{{ result.status }}">{{ result.status.upper() }}</span></td>
+                            <td><pre>{{ result.evidence }}</pre></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Installed Packages Card -->
+        <div class="card">
+            <h2>Installed Packages ({{ host.installed_packages|length }})</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Package Name</th>
+                        <th>Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pkg in host.installed_packages %}
+                        <tr>
+                            <td>{{ pkg.name }}</td>
+                            <td>{{ pkg.version }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+Package: saas-security-agent
+Version: 1.0.0
+Architecture: all
+Maintainer: Jignesh <parmarjigs1188@gmail.com>
+Description: A security agent for collecting system data.
+ This agent collects installed packages and CIS benchmark results from a Linux host and reports them to a central server.
+Depends: python3, python3-requests
