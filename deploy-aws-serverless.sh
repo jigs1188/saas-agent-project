@@ -23,19 +23,19 @@ API_STAGE="prod"
 
 # Function to print colored messages
 print_info() {
-    echo -e "${BLUE}ℹ ${NC}$1"
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 print_success() {
-    echo -e "${GREEN}✅ ${NC}$1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  ${NC}$1"
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}❌ ${NC}$1"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 print_header() {
