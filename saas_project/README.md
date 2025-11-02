@@ -1,105 +1,151 @@
-# SaaS Security Monitoring Agent & Dashboard
+# SaaS Security Monitoring - Agent & Backend
 
-This project is a solution for the Software Engineer assignment. It consists of a Python-based Linux agent that collects system information and a Python FastAPI backend with a simple web frontend to display the data.
+This directory contains the core implementation components:
+- **agent/** - Linux security data collection agent
+- **backend/** - FastAPI web server for local development
 
-## Project Structure
+## Components
 
-```
-saas_project/
-├── agent/              # The data collection agent
-│   ├── agent.py
-│   ├── requirements.txt
-│   └── packaging/      # Files for building the .deb package
-├── backend/            # The FastAPI server and web dashboard
-│   ├── main.py
-│   ├── requirements.txt
-│   └── templates/      # HTML templates for the frontend
-└── README.md           # This file
-```
+### Agent (`agent/`)
 
----
+Python-based security agent for Linux systems that collects:
+- Installed packages (dpkg/rpm/apk support)
+- System security configurations
+- CIS benchmark check results
 
-## How to Run the Application
+**Files:**
+- `agent.py` - Main agent implementation
+- `requirements.txt` - Python dependencies
+- `packaging/debian/` - Debian package structure
 
-You will need two terminal windows to run the backend server and the agent simultaneously.
+### Backend (`backend/`)
 
-**Prerequisites:**
+FastAPI server providing:
+- REST API for data ingestion
+- Web dashboard for visualization
+- In-memory data storage
 
-- Python 3.7+
-- `venv` for creating virtual environments
-- `dpkg-deb` for packaging (available on Debian/Ubuntu)
+**Files:**
+- `main.py` - Server implementation
+- `requirements.txt` - Dependencies
+- `templates/` - HTML interface
 
-### Terminal 1: Start the Backend Server
+## Quick Start
 
-The backend server receives data from the agent and displays it on the web dashboard.
+### Terminal 1: Start Backend Server
 
 ```bash
-# 1. Navigate to the backend directory
-cd saas_project/backend
-
-# 2. Create and activate a Python virtual environment
+cd backend
 python3 -m venv venv
 source venv/bin/activate
-
-# 3. Install the required dependencies
 pip install -r requirements.txt
-
-# 4. Run the FastAPI server
-# The --reload flag automatically restarts the server on code changes.
 uvicorn main:app --reload
 ```
 
-Once running, the server will be available at `http://127.0.0.1:8000`.
+Server runs at `http://127.0.0.1:8000`
 
-### Terminal 2: Run the Agent
-
-The agent collects data from the machine it's running on and sends it to the backend.
+### Terminal 2: Run Agent
 
 ```bash
-# 1. Navigate to the agent directory
-cd saas_project/agent
-
-# 2. Create and activate a Python virtual environment
+cd agent
 python3 -m venv venv
 source venv/bin/activate
-
-# 3. Install the required dependencies
 pip install -r requirements.txt
 
-# 4. Run the agent script
-# sudo is required because many security checks need root privileges to inspect system files.
-sudo python3 agent.py
+# For local backend
+export BACKEND_URL="http://127.0.0.1:8000/ingest"
+sudo -E python3 agent.py
+
+# For AWS backend
+export API_GATEWAY_ENDPOINT="https://your-api.execute-api.region.amazonaws.com/prod"
+export API_KEY="your-api-key-here"
+sudo -E python3 agent.py
 ```
 
-After the agent runs, it will print the collected JSON data to the console and send it to the backend server.
+Root access required for security checks.
 
-### View the Results
+### View Dashboard
 
-1.  Open your web browser and navigate to `http://127.0.0.1:8000`.
-2.  You will see the hostname of the machine where you ran the agent.
-3.  Click the hostname to view the detailed report, including host information, CIS check results, and a list of all installed packages.
+Navigate to `http://127.0.0.1:8000` to see:
+- Host list
+- Security status
+- Package inventory
+- CIS check results
 
----
-
-## How to Package the Agent
-
-The assignment requires the agent to be in a proper package format (`.deb` for Ubuntu/Debian).
+## Building Debian Package
 
 ```bash
-# 1. Navigate to the agent directory
-cd saas_project/agent
-
-# 2. Run the dpkg-deb command to build the package
-# This command takes the 'debian' directory and packages it into a .deb file.
+cd agent
 dpkg-deb --build packaging/debian
 ```
 
-After running the command, you will find the package `debian.deb` in the `saas_project/agent/packaging/` directory. You can rename it to `saas-security-agent_1.0.0_all.deb` for clarity.
-
-**To install the package (for testing):**
+Creates `debian.deb` for deployment:
 
 ```bash
-sudo dpkg -i saas_project/agent/packaging/debian.deb
+sudo dpkg -i packaging/debian/debian.deb
 ```
 
-**After installation, the agent will be available at `/usr/local/bin/saas-agent`.**
+Installs to `/usr/local/bin/saas-agent`
+
+## API Endpoints
+
+**POST /ingest**
+- Receives agent data
+- Body: JSON with host_details, installed_packages, cis_results
+
+**GET /api/hosts**
+- Returns list of monitored hosts
+
+**GET /api/hosts/{hostname}**
+- Returns detailed host data
+
+## Data Structure
+
+```json
+{
+  "host_details": {
+    "hostname": "server01",
+    "os_type": "Ubuntu",
+    "os_version": "22.04"
+  },
+  "installed_packages": [
+    {"name": "nginx", "version": "1.18.0"}
+  ],
+  "cis_results": [
+    {
+      "check": "SSH root login disabled",
+      "status": "pass",
+      "evidence": "PermitRootLogin no"
+    }
+  ]
+}
+```
+
+## CIS Security Checks
+
+1. SSH root login disabled
+2. Firewall enabled
+3. Audit daemon running
+4. AppArmor/SELinux enabled
+5. No world-writable files
+6. Unused filesystems disabled
+7. Time synchronization configured
+8. Password policies enforced
+9. GDM auto-login disabled
+10. No passwordless sudo
+
+## Requirements
+
+**Agent:**
+- Python 3.7+
+- requests library
+- Root/sudo access
+- Supported: Ubuntu, Debian, RHEL, CentOS, Alpine
+
+**Backend:**
+- Python 3.7+
+- FastAPI, Uvicorn, Jinja2
+
+## Production Deployment
+
+For production use, deploy to AWS serverless infrastructure (see main README). The local FastAPI backend is for development and testing only.

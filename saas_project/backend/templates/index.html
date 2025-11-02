@@ -1,32 +1,290 @@
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Dashboard</title>
-    <style>
-        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; color: #333; }
-        h1 { color: #444; }
-        .container { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        ul { list-style-type: none; padding: 0; }
-        li { background: #e9e9f3; margin: 0.5em 0; padding: 1em; border-radius: 4px; }
-        a { text-decoration: none; color: #007bff; font-weight: bold; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Monitored Hosts</h1>
-        {% if hosts %}
-            <ul>
-                {% for host in hosts %}
-                    <li><a href="/hosts/{{ host }}">{{ host }}</a></li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No hosts have reported data yet. Run an agent to see it here.</p>
-        {% endif %}
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SaaS Security Monitor{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="mb-8">
+    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl shadow-2xl p-8 text-white fade-in">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">
+                    <i class="fas fa-shield-alt mr-3"></i>Security Dashboard
+                </h1>
+                <p class="text-indigo-100 text-lg">
+                    Monitor and secure your infrastructure in real-time
+                </p>
+            </div>
+            <div class="hidden md:block">
+                <div class="text-center">
+                    <div class="text-5xl font-bold pulse">{{ hosts|length }}</div>
+                    <div class="text-indigo-200 mt-2">Monitored Hosts</div>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+{% if hosts %}
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Total Hosts Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase mb-1">Total Hosts</p>
+                    <h3 class="text-3xl font-bold text-gray-800">{{ hosts|length }}</h3>
+                    <p class="text-green-600 text-sm mt-2">
+                        <i class="fas fa-arrow-up mr-1"></i>Active
+                    </p>
+                </div>
+                <div class="gradient-blue p-4 rounded-full">
+                    <i class="fas fa-server text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Security Score Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase mb-1">Security Score</p>
+                    <h3 class="text-3xl font-bold text-gray-800">85%</h3>
+                    <p class="text-yellow-600 text-sm mt-2">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Medium
+                    </p>
+                </div>
+                <div class="gradient-orange p-4 rounded-full">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CIS Checks Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase mb-1">CIS Checks</p>
+                    <h3 class="text-3xl font-bold text-gray-800">10</h3>
+                    <p class="text-blue-600 text-sm mt-2">
+                        <i class="fas fa-check-circle mr-1"></i>Running
+                    </p>
+                </div>
+                <div class="gradient-green p-4 rounded-full">
+                    <i class="fas fa-tasks text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase mb-1">Active Alerts</p>
+                    <h3 class="text-3xl font-bold text-gray-800">3</h3>
+                    <p class="text-red-600 text-sm mt-2">
+                        <i class="fas fa-bell mr-1"></i>Attention
+                    </p>
+                </div>
+                <div class="gradient-red p-4 rounded-full">
+                    <i class="fas fa-exclamation-circle text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monitored Hosts Section -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden fade-in">
+        <!-- Section Header -->
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-server mr-3 text-indigo-600"></i>
+                        Monitored Hosts
+                    </h2>
+                    <p class="text-gray-600 text-sm mt-1">Click on any host to view detailed security report</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center space-x-2">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hosts Grid -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for host in hosts %}
+                <a href="/hosts/{{ host }}" class="block">
+                    <div class="bg-gradient-to-br from-white to-gray-50 rounded-xl border-2 border-gray-200 hover:border-indigo-500 p-6 card-hover transition-all duration-300">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="gradient-blue p-3 rounded-lg">
+                                <i class="fas fa-server text-white text-2xl"></i>
+                            </div>
+                            <span class="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+                                <span>Online</span>
+                            </span>
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">
+                            {{ host }}
+                        </h3>
+                        
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-linux w-5 mr-2 text-gray-400"></i>
+                                <span>Linux System</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-clock w-5 mr-2 text-gray-400"></i>
+                                <span>Last update: Just now</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-shield-alt w-5 mr-2 text-gray-400"></i>
+                                <span>10 Security Checks</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Score Progress -->
+                        <div class="mb-3">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600 font-medium">Security Score</span>
+                                <span class="font-bold text-indigo-600">85%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill gradient-blue" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
+                            <span>View Details</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-download text-indigo-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-bold text-gray-800">Download Agent</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">
+                Install the security agent on new hosts to start monitoring
+            </p>
+            <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">
+                <i class="fas fa-terminal mr-2"></i>Get Installation Command
+            </button>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-file-alt text-green-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-bold text-gray-800">Generate Report</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">
+                Create comprehensive security reports for compliance
+            </p>
+            <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">
+                <i class="fas fa-file-pdf mr-2"></i>Generate PDF Report
+            </button>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-cog text-orange-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-bold text-gray-800">Configuration</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">
+                Configure security checks and notification settings
+            </p>
+            <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">
+                <i class="fas fa-sliders-h mr-2"></i>Manage Settings
+            </button>
+        </div>
+    </div>
+
+{% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center fade-in">
+        <div class="max-w-md mx-auto">
+            <div class="gradient-blue p-6 rounded-full inline-block mb-6">
+                <i class="fas fa-server text-white text-5xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">No Hosts Monitored Yet</h2>
+            <p class="text-gray-600 mb-8 text-lg">
+                Get started by installing the security agent on your Linux hosts to begin monitoring their security posture.
+            </p>
+            
+            <!-- Installation Instructions -->
+            <div class="bg-gray-50 rounded-xl p-6 text-left mb-6">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-terminal mr-2 text-indigo-600"></i>
+                    Quick Installation
+                </h3>
+                <div class="bg-gray-800 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                    <p class="mb-2"># Install the agent</p>
+                    <p class="mb-2">$ sudo dpkg -i saas-security-agent.deb</p>
+                    <p class="mb-2"># Run the agent</p>
+                    <p>$ sudo python3 agent.py</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button class="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold flex items-center justify-center space-x-2">
+                    <i class="fas fa-book"></i>
+                    <span>View Documentation</span>
+                </button>
+                <button class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold flex items-center justify-center space-x-2">
+                    <i class="fas fa-download"></i>
+                    <span>Download Agent</span>
+                </button>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Auto-refresh dashboard every 30 seconds
+    setInterval(() => {
+        console.log('Auto-refreshing dashboard data...');
+        // In production, use AJAX to fetch updated data without full page reload
+    }, 30000);
+    
+    // Animate counters on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const counters = document.querySelectorAll('.text-3xl.font-bold');
+        counters.forEach(counter => {
+            const target = parseInt(counter.innerText);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    counter.innerText = target;
+                    clearInterval(timer);
+                } else {
+                    counter.innerText = Math.floor(current);
+                }
+            }, 20);
+        });
+    });
+</script>
+{% endblock %}

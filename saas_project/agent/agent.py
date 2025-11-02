@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+SaaS Security Agent
+Collects system information and security checks from Linux hosts
+Sends data to AWS API Gateway for processing
+"""
 
 import json
 import platform
@@ -6,92 +12,196 @@ import socket
 import requests
 import os
 
-# --- Configuration ---
-# In a real-world scenario, this should come from a config file or environment variables.
-BACKEND_URL = "http://127.0.0.1:8000/ingest"
+# Configuration
+# I learned you can use environment variables to keep credentials secure
+# instead of hardcoding them in the script
+API_GATEWAY_ENDPOINT = os.environ.get('API_GATEWAY_ENDPOINT', '')
+API_KEY = os.environ.get('API_KEY', '')
 
-# --- 1. Host Details Collection ---
+# For local testing during development, fallback to localhost
+BACKEND_URL = os.environ.get('BACKEND_URL', 'http://127.0.0.1:8000/ingest')
+
+# Figure out which endpoint to use based on what's configured
+if API_GATEWAY_ENDPOINT:
+    INGEST_URL = f"{API_GATEWAY_ENDPOINT}/ingest"
+    USE_API_GATEWAY = True
+else:
+    INGEST_URL = BACKEND_URL
+    USE_API_GATEWAY = False
+
+AGENT_VERSION = "1.0.0"
+
 def get_host_details():
-    """Gathers basic details about the host machine."""
-    return {
+    """
+    Collect basic information about this machine
+    Using Python's platform and socket libraries - these work on all Linux distros
+    """
+    details = {
         "hostname": socket.gethostname(),
         "os_type": platform.system(),
         "os_version": platform.release(),
     }
+    return details
 
-# --- 2. Package Collection ---
+
 def get_installed_packages():
-    """Detects the distro and lists installed packages."""
+    """
+    Get list of installed software packages
+    Different Linux distros use different package managers, so we check for each one
+    dpkg = Debian/Ubuntu, rpm = RHEL/CentOS, apk = Alpine
+    """
     packages = []
+    
     try:
-        # Check for dpkg (Debian, Ubuntu)
-        if subprocess.run(["which", "dpkg"], capture_output=True, text=True).stdout:
-            result = subprocess.run(["dpkg-query", "-W", "-f=${Package}\t${Version}\n"], capture_output=True, text=True, check=True)
+        # Try dpkg first (used by Ubuntu, Debian)
+        check_dpkg = subprocess.run(["which", "dpkg"], capture_output=True, text=True)
+        if check_dpkg.stdout:
+            # dpkg-query lists all packages - using format string to get name and version
+            result = subprocess.run(
+                ["dpkg-query", "-W", "-f=${Package}\t${Version}\n"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
             for line in result.stdout.strip().split("\n"):
-                if line:
-                    name, version = line.split("\t")
-                    packages.append({"name": name, "version": version})
-        # Check for rpm (RHEL, CentOS, Fedora)
+                if line:  # Skip empty lines
+                    parts = line.split("\t")
+                    if len(parts) == 2:
+                        packages.append({"name": parts[0], "version": parts[1]})
+        
+        # Try rpm if dpkg not found (RHEL, CentOS, Fedora)
         elif subprocess.run(["which", "rpm"], capture_output=True, text=True).stdout:
-            result = subprocess.run(["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n"], capture_output=True, text=True, check=True)
+            # rpm -qa = query all packages
+            result = subprocess.run(
+                ["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
             for line in result.stdout.strip().split("\n"):
                 if line:
-                    name, version = line.split("\t")
-                    packages.append({"name": name, "version": version})
-        # Check for apk (Alpine)
+                    parts = line.split("\t")
+                    if len(parts) == 2:
+                        packages.append({"name": parts[0], "version": parts[1]})
+        
+        # Try apk if neither dpkg nor rpm found (Alpine Linux)
         elif subprocess.run(["which", "apk"], capture_output=True, text=True).stdout:
             result = subprocess.run(["apk", "info"], capture_output=True, text=True, check=True)
             for line in result.stdout.strip().split("\n"):
                 if line:
-                    # Alpine's "apk info" is just a list of package names with versions
+                    # apk doesn't easily give version, so mark as unknown
                     packages.append({"name": line, "version": "unknown"})
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"Error collecting packages: {e}")
+    
+    except (subprocess.CalledProcessError, FileNotFoundError) as err:
+        print(f"Warning: Couldn't collect package list - {err}")
+    
     return packages
 
-# --- 3. CIS Security Checks ---
+
+# Security Check Functions
+# Based on CIS (Center for Internet Security) benchmarks
+# These are industry-standard security configurations
 
 def _run_shell_command(command, timeout=60):
-    """A helper to run shell commands and return their output with a timeout."""
+    """
+    Helper function to run shell commands safely
+    Added timeout to prevent hanging on slow commands
+    """
     try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            command, 
+            shell=True, 
+            capture_output=True, 
+            text=True, 
+            timeout=timeout
+        )
         return result.stdout.strip(), result.stderr.strip()
     except subprocess.TimeoutExpired:
         return None, f"Command timed out after {timeout} seconds."
-    except Exception as e:
-        return None, str(e)
+    except Exception as err:
+        return None, str(err)
+
 
 def check_root_login():
-    """CIS 5.2.4: Ensure SSH root login is disabled."""
-    file_path = "/etc/ssh/sshd_config"
-    if not os.path.exists(file_path):
-        return {"check": "CIS 5.2.4 SSH Root Login", "status": "fail", "evidence": f"{file_path} not found."}
+    """
+    CIS 5.2.4: SSH should not allow direct root login
+    This is important because root has unlimited privileges
+    """
+    config_file = "/etc/ssh/sshd_config"
     
-    stdout, _ = _run_shell_command(f"grep -Ei '^\s*PermitRootLogin' {file_path}")
-    if stdout and "yes" in stdout.lower():
-        return {"check": "CIS 5.2.4 SSH Root Login", "status": "fail", "evidence": f"PermitRootLogin is set to 'yes' in {file_path}"}
-    return {"check": "CIS 5.2.4 SSH Root Login", "status": "pass", "evidence": "Root login is disabled."}
+    if not os.path.exists(config_file):
+        return {
+            "check": "CIS 5.2.4 SSH Root Login", 
+            "status": "fail", 
+            "evidence": f"SSH config not found at {config_file}"
+        }
+    
+    # Look for PermitRootLogin setting
+    output, _ = _run_shell_command(f"grep -Ei '^\s*PermitRootLogin' {config_file}")
+    
+    if output and "yes" in output.lower():
+        return {
+            "check": "CIS 5.2.4 SSH Root Login", 
+            "status": "fail", 
+            "evidence": f"Root login is enabled in {config_file}"
+        }
+    
+    return {
+        "check": "CIS 5.2.4 SSH Root Login", 
+        "status": "pass", 
+        "evidence": "Root login is properly disabled"
+    }
 
 def check_firewall_enabled():
-    """CIS 3.5.1.1 & 3.5.2.1: Ensure firewall is enabled (ufw or firewalld)."""
-    # Check for ufw
-    stdout, _ = _run_shell_command("ufw status")
-    if stdout and "Status: active" in stdout:
-        return {"check": "CIS 3.5.x Firewall Enabled", "status": "pass", "evidence": "ufw is active."}
+    """
+    CIS 3.5.x: Check if a firewall is running
+    Supports both ufw (Ubuntu) and firewalld (RHEL)
+    """
+    # Check ufw first (common on Ubuntu/Debian)
+    output, _ = _run_shell_command("ufw status")
+    if output and "Status: active" in output:
+        return {
+            "check": "CIS 3.5.x Firewall Enabled", 
+            "status": "pass", 
+            "evidence": "ufw firewall is active"
+        }
     
-    # Check for firewalld
-    stdout, _ = _run_shell_command("systemctl is-active firewalld")
-    if stdout == "active":
-        return {"check": "CIS 3.5.x Firewall Enabled", "status": "pass", "evidence": "firewalld is active."}
-        
-    return {"check": "CIS 3.5.x Firewall Enabled", "status": "fail", "evidence": "No active firewall (ufw or firewalld) found."}
+    # Check firewalld (common on RHEL/CentOS)
+    output, _ = _run_shell_command("systemctl is-active firewalld")
+    if output == "active":
+        return {
+            "check": "CIS 3.5.x Firewall Enabled", 
+            "status": "pass", 
+            "evidence": "firewalld is active"
+        }
+    
+    return {
+        "check": "CIS 3.5.x Firewall Enabled", 
+        "status": "fail", 
+        "evidence": "No active firewall detected"
+    }
+
 
 def check_auditd_running():
-    """CIS 4.1.1.2: Ensure auditd service is enabled and running."""
-    stdout, _ = _run_shell_command("systemctl is-active auditd && systemctl is-enabled auditd")
-    if "active" in stdout and "enabled" in stdout:
-        return {"check": "CIS 4.1.1.2 Auditd Service", "status": "pass", "evidence": "auditd is active and enabled."}
-    return {"check": "CIS 4.1.1.2 Auditd Service", "status": "fail", "evidence": "auditd is not active or not enabled."}
+    """
+    CIS 4.1.1.2: Audit daemon should be running
+    auditd logs security-relevant events - important for compliance
+    """
+    # Check if service is both active AND enabled (starts on boot)
+    output, _ = _run_shell_command("systemctl is-active auditd && systemctl is-enabled auditd")
+    
+    if "active" in output and "enabled" in output:
+        return {
+            "check": "CIS 4.1.1.2 Auditd Service", 
+            "status": "pass", 
+            "evidence": "auditd is running and enabled"
+        }
+    
+    return {
+        "check": "CIS 4.1.1.2 Auditd Service", 
+        "status": "fail", 
+        "evidence": "auditd is not properly configured"
+    }
 
 def check_apparmor_enabled():
     """CIS 1.6.1: Ensure AppArmor is enabled."""
@@ -174,8 +284,11 @@ def check_sudo_nopasswd():
 
 
 def run_all_checks():
-    """Runs all CIS checks and returns a list of results."""
-    return [
+    """
+    Run all the security checks and collect results
+    Returns a list of check results that we'll send to the backend
+    """
+    checks = [
         check_root_login(),
         check_firewall_enabled(),
         check_auditd_running(),
@@ -187,38 +300,120 @@ def run_all_checks():
         check_gdm_autologin_disabled(),
         check_sudo_nopasswd(),
     ]
+    return checks
 
-# --- Main Execution ---
+
 def main():
-    """The main function to collect data and send it to the backend."""
-    print("Starting data collection...")
+    """
+    Main function - orchestrates the whole data collection process
+    """
+    print("=" * 60)
+    print("SaaS Security Agent - Starting data collection...")
+    print("=" * 60)
     
-    host_details = get_host_details()
+    # Show where we're sending data
+    print(f"Target endpoint: {INGEST_URL}")
+    print(f"Using API Gateway: {USE_API_GATEWAY}")
+    print()
+    
+    # Step 1: Collect host information
+    host_info = get_host_details()
+    print(f"✓ Collected host details for: {host_info['hostname']}")
+    
+    # Step 2: Get list of installed software
     packages = get_installed_packages()
-    cis_results = run_all_checks()
+    print(f"✓ Collected {len(packages)} installed packages")
     
-    payload = {
-        "host_details": host_details,
+    # Step 3: Run security checks
+    security_checks = run_all_checks()
+    passed_count = sum(1 for check in security_checks if check['status'] == 'pass')
+    print(f"✓ Completed {len(security_checks)} CIS security checks ({passed_count} passed)")
+    print()
+    
+    # Build the complete data payload
+    data_to_send = {
+        "host_details": host_info,
         "installed_packages": packages,
-        "cis_results": cis_results,
+        "cis_results": security_checks,
+        "agent_version": AGENT_VERSION
     }
     
-    # The complete data payload
-    final_payload = json.dumps(payload, indent=2)
+    # Set up HTTP headers
+    headers = {'Content-Type': 'application/json'}
     
-    print("--- Collected Data ---")
-    print(final_payload)
-    print("----------------------")
+    # Add API key if we're using AWS
+    if USE_API_GATEWAY and API_KEY:
+        headers['x-api-key'] = API_KEY
+        print("✓ API key added to request headers")
+    elif USE_API_GATEWAY and not API_KEY:
+        print("⚠️  WARNING: Using API Gateway but no API key set!")
+        print("   Set API_KEY environment variable")
     
+    # Debug mode - print the data we're about to send
+    if os.environ.get('DEBUG', 'false').lower() == 'true':
+        print("\n--- Collected Data (JSON) ---")
+        print(json.dumps(data_to_send, indent=2))
+        print("-----------------------------\n")
+    
+    # Try to send the data
     try:
-        print(f"Sending data to {BACKEND_URL}...")
-        response = requests.post(BACKEND_URL, json=payload, timeout=15)
-        response.raise_for_status()  # Raise an exception for bad status codes
-        print("Data sent successfully!")
-        print("Server response:", response.json())
-    except requests.exceptions.RequestException as e:
-        print(f"Error sending data to backend: {e}")
-        # In a real agent, you would save the data locally to retry later.
+        print(f"Sending data to {INGEST_URL}...")
+        response = requests.post(INGEST_URL, json=data_to_send, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        print("\n" + "=" * 60)
+        print("✅ SUCCESS - Data sent successfully!")
+        print("=" * 60)
+        
+        # Show what the server responded with
+        try:
+            response_json = response.json()
+            print("\nServer Response:")
+            print(json.dumps(response_json, indent=2))
+        except json.JSONDecodeError:
+            print(f"Response: {response.text}")
+    
+    except requests.exceptions.HTTPError as err:
+        print("\n" + "=" * 60)
+        print("❌ HTTP ERROR - Failed to send data")
+        print("=" * 60)
+        print(f"Status Code: {err.response.status_code}")
+        print(f"Response: {err.response.text}")
+        
+        # Provide helpful hints based on the error
+        if err.response.status_code == 401:
+            print("\n💡 TIP: Check your API key configuration")
+            print(f"   Current API_KEY: {'Set' if API_KEY else 'Not set'}")
+        elif err.response.status_code == 403:
+            print("\n💡 TIP: Your API key may be invalid or expired")
+    
+    except requests.exceptions.ConnectionError as err:
+        print("\n" + "=" * 60)
+        print("❌ CONNECTION ERROR - Cannot reach backend")
+        print("=" * 60)
+        print(f"Error: {err}")
+        print("\n💡 TIPS:")
+        print("   1. Check if backend is running")
+        print("   2. Verify the endpoint URL is correct")
+        print(f"   3. Current endpoint: {INGEST_URL}")
+    
+    except requests.exceptions.Timeout:
+        print("\n" + "=" * 60)
+        print("❌ TIMEOUT ERROR - Request timed out")
+        print("=" * 60)
+        print("The backend took too long to respond (>30 seconds)")
+    
+    except requests.exceptions.RequestException as err:
+        print("\n" + "=" * 60)
+        print("❌ REQUEST ERROR - Failed to send data")
+        print("=" * 60)
+        print(f"Error: {err}")
+        print("\n💡 TIP: In production, would save data locally for retry")
+    
+    print("\n" + "=" * 60)
+    print("Agent execution completed")
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

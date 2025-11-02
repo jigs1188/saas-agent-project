@@ -1,0 +1,28 @@
+# AWS Deployment Configuration
+# Generated: Sun Nov  2 09:20:19 UTC 2025
+
+AWS_REGION=us-east-1
+DYNAMODB_TABLE=saas-hosts
+API_GATEWAY_ID=6n4x0gsk8j
+API_ENDPOINT=https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod
+API_KEY=GNw8sV37D9aQvBtb8QV8r51JW4hS5Fc4P77LRqd8
+
+# Environment variables for agent
+export API_GATEWAY_ENDPOINT="https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod"
+export API_KEY="GNw8sV37D9aQvBtb8QV8r51JW4hS5Fc4P77LRqd8"
+
+# Test commands
+# List hosts:
+curl "https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod/hosts"
+
+# Get specific host:
+curl "https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod/hosts/HOSTNAME"
+
+# Get CIS results:
+curl "https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod/cis-results"
+
+# Ingest data (with API key):
+curl -X POST "https://6n4x0gsk8j.execute-api.us-east-1.amazonaws.com/prod/ingest" \
+  -H "x-api-key: GNw8sV37D9aQvBtb8QV8r51JW4hS5Fc4P77LRqd8" \
+  -H "Content-Type: application/json" \
+  -d @test-payload.json
