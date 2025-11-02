@@ -1,9 +1,5 @@
 """
-Lambda Function: Get Host Details
-----------------------------------
-This handles GET /hosts/{hostname} endpoint
-When you click on a specific host in the dashboard, this function 
-returns all the detailed information about that server.
+Lambda: Get host details
 """
 
 import json
@@ -11,66 +7,39 @@ import boto3
 import os
 from decimal import Decimal
 
-# Connect to our DynamoDB table
 dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('REGION', 'us-east-1'))
 table = dynamodb.Table(os.environ.get('TABLE_NAME', 'saas-hosts'))
 
 class DecimalEncoder(json.JSONEncoder):
-    """
-    Same Decimal conversion issue as the other Lambda functions
-    DynamoDB uses Decimal, JSON uses int/float
-    """
+    """Convert Decimal to int/float for JSON"""
     def default(self, obj):
         if isinstance(obj, Decimal):
             return int(obj) if obj % 1 == 0 else float(obj)
         return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
-    """
-    Gets detailed information for one specific host
-    
-    API Gateway passes the hostname from the URL as a path parameter
-    """
     print(f"Received event: {json.dumps(event)}")
     
     try:
-        # Extract hostname from the URL path
-        # For example, if the URL is /hosts/server01, hostname will be "server01"
         hostname = event.get('pathParameters', {}).get('hostname')
         
         if not hostname:
-            # Someone called the endpoint without providing a hostname
             return {
                 'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': json.dumps({
-                    'error': 'Missing hostname parameter'
-                })
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Missing hostname parameter'})
             }
         
-        # Look up the host in DynamoDB using the hostname as the key
         response = table.get_item(Key={'hostname': hostname})
         item = response.get('Item')
         
         if not item:
-            # This hostname doesn't exist in our database
             return {
                 'statusCode': 404,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': json.dumps({
-                    'error': 'Host not found',
-                    'hostname': hostname
-                })
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Host not found', 'hostname': hostname})
             }
         
-        # Prepare the response data - organize it nicely
-        # The data structure in DynamoDB is a bit nested, so we're restructuring it here
         host_data = {
             'hostname': item.get('hostname'),
             'host_details': item.get('data', {}).get('host_details', {}),
@@ -91,30 +60,21 @@ def lambda_handler(event, context):
             }
         }
         
-        print(f"✅ Retrieved data for host: {hostname}")
+        print(f"✅ Retrieved data for {hostname}")
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps(host_data, cls=DecimalEncoder)
         }
         
     except Exception as e:
-        print(f"❌ Error retrieving host details: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps({
-                'error': 'Internal server error',
-                'details': str(e)
-            })
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Internal server error', 'details': str(e)})
         }

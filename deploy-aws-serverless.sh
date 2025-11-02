@@ -2,7 +2,7 @@
 ################################################################################
 # AWS Serverless Deployment - Complete Automation Script
 # Deploys: DynamoDB + Lambda + API Gateway
-# Architecture: API Gateway → Lambda → DynamoDB (as per assignment PDF)
+# Architecture: API Gateway → Lambda → DynamoDB
 ################################################################################
 
 set -e  # Exit on error
@@ -39,9 +39,7 @@ print_error() {
 }
 
 print_header() {
-    echo -e "\n${BLUE}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${BLUE}  $1${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
+    echo -e "\n${YELLOW}# $1${NC}"
 }
 
 # Check prerequisites
@@ -487,16 +485,12 @@ create_api_key() {
 
 # Print summary
 print_summary() {
-    print_header "Deployment Complete! 🎉"
+    print_header "Deployment Summary"
     
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║          AWS SERVERLESS DEPLOYMENT SUMMARY                 ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -e "${BLUE}DynamoDB Table:${NC}        $TABLE_NAME"
-    echo -e "${BLUE}API Gateway ID:${NC}        $API_ID"
-    echo -e "${BLUE}API Endpoint:${NC}          $API_ENDPOINT"
-    echo -e "${BLUE}API Key:${NC}               $API_KEY"
+    echo -e "${BLUE}DynamoDB Table:${NC} $TABLE_NAME"
+    echo -e "${BLUE}API Gateway ID:${NC} $API_ID"
+    echo -e "${BLUE}API Endpoint:${NC}   $API_ENDPOINT"
+    echo -e "${BLUE}API Key:${NC}        $API_KEY"
     echo ""
     echo -e "${YELLOW}Available Endpoints:${NC}"
     echo -e "  ${GREEN}POST${NC} $API_ENDPOINT/ingest           (requires API key)"
@@ -505,57 +499,47 @@ print_summary() {
     echo -e "  ${GREEN}GET${NC}  $API_ENDPOINT/cis-results"
     echo ""
     echo -e "${YELLOW}Next Steps:${NC}"
-    echo -e "  1. Update agent configuration:"
+    echo -e "  1. Configure agent environment:"
     echo -e "     ${BLUE}export API_GATEWAY_ENDPOINT=\"$API_ENDPOINT\"${NC}"
     echo -e "     ${BLUE}export API_KEY=\"$API_KEY\"${NC}"
     echo ""
-    echo -e "  2. Test the deployment:"
-    echo -e "     ${BLUE}curl -X POST \"$API_ENDPOINT/ingest\" \\${NC}"
-    echo -e "     ${BLUE}  -H \"x-api-key: $API_KEY\" \\${NC}"
-    echo -e "     ${BLUE}  -H \"Content-Type: application/json\" \\${NC}"
-    echo -e "     ${BLUE}  -d '{\"host_details\":{...}}'${NC}"
-    echo ""
-    echo -e "  3. Run the agent:"
+    echo -e "  2. Run the agent:"
     echo -e "     ${BLUE}cd saas_project/agent${NC}"
     echo -e "     ${BLUE}sudo -E python3 agent.py${NC}"
     echo ""
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║  Save this information! You'll need it for configuration  ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
     
     # Save to file
     cat > deployment-config.txt <<EOF
 # AWS Deployment Configuration
-# Generated: $(date)
+# Generated on: $(date)
 
+# Core Infrastructure Details
 AWS_REGION=$AWS_REGION
 DYNAMODB_TABLE=$TABLE_NAME
 API_GATEWAY_ID=$API_ID
 API_ENDPOINT=$API_ENDPOINT
 API_KEY=$API_KEY
 
-# Environment variables for agent
+# Environment variables for agent execution
 export API_GATEWAY_ENDPOINT="$API_ENDPOINT"
 export API_KEY="$API_KEY"
 
-# Test commands
-# List hosts:
-curl "$API_ENDPOINT/hosts"
-
-# Get specific host:
-curl "$API_ENDPOINT/hosts/HOSTNAME"
-
-# Get CIS results:
-curl "$API_ENDPOINT/cis-results"
-
-# Ingest data (with API key):
-curl -X POST "$API_ENDPOINT/ingest" \\
-  -H "x-api-key: $API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d @test-payload.json
+# Example test commands
+#
+# List all hosts:
+# curl "\$API_ENDPOINT/hosts"
+#
+# Get details for a specific host (replace 'my-host'):
+# curl "\$API_ENDPOINT/hosts/my-host"
+#
+# Ingest data using a test payload:
+# curl -X POST "\$API_ENDPOINT/ingest" \\
+#   -H "x-api-key: \$API_KEY" \\
+#   -H "Content-Type: application/json" \\
+#   -d @test-payload.json
 EOF
     
-    print_success "Configuration saved to: deployment-config.txt"
+    print_success "Deployment details saved to: deployment-config.txt"
 }
 
 # Main execution
