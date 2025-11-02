@@ -100,7 +100,7 @@ def lambda_handler(event, context):
             'top_failing_checks': checks_summary[:5]
         }
         
-        print(f"✅ Aggregated {total_checks} checks across {total_hosts} hosts")
+        print(f"Aggregated {total_checks} checks across {total_hosts} hosts")
         
         return {
             'statusCode': 200,
@@ -109,7 +109,7 @@ def lambda_handler(event, context):
         }
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
         

@@ -60,7 +60,7 @@ def lambda_handler(event, context):
             }
         }
         
-        print(f"✅ Retrieved data for {hostname}")
+        print(f"Retrieved data for {hostname}")
         
         return {
             'statusCode': 200,
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
         }
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
         

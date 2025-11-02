@@ -270,16 +270,16 @@ def main():
     
     # Collect host info
     host_info = get_host_details()
-    print(f"✓ Host details: {host_info['hostname']}")
+    print(f"Host details: {host_info['hostname']}")
     
     # Get packages
     packages = get_installed_packages()
-    print(f"✓ Packages: {len(packages)}")
+    print(f"Packages: {len(packages)}")
     
     # Run security checks
     security_checks = run_all_checks()
     passed_count = sum(1 for check in security_checks if check['status'] == 'pass')
-    print(f"✓ Security checks: {passed_count}/{len(security_checks)} passed")
+    print(f"Security checks: {passed_count}/{len(security_checks)} passed")
     print()
     
     # Build payload
@@ -302,7 +302,7 @@ def main():
         response.raise_for_status()
         
         print("\n" + "=" * 60)
-        print("✅ Data sent successfully")
+        print("Data sent successfully")
         print("=" * 60)
         
         try:
@@ -312,20 +312,20 @@ def main():
             print(f"Response: {response.text}")
     
     except requests.exceptions.HTTPError as err:
-        print(f"\n❌ HTTP Error {err.response.status_code}")
+        print(f"\nHTTP Error {err.response.status_code}")
         print(f"Response: {err.response.text}")
         if err.response.status_code == 401:
             print("Check API key configuration")
     
     except requests.exceptions.ConnectionError as err:
-        print(f"\n❌ Connection error: {err}")
+        print(f"\nConnection error: {err}")
         print("Check if backend is running")
     
     except requests.exceptions.Timeout:
-        print("\n❌ Request timed out")
+        print("\nRequest timed out")
     
     except requests.exceptions.RequestException as err:
-        print(f"\n❌ Request error: {err}")
+        print(f"\nRequest error: {err}")
     
     print("\n" + "=" * 60)
     print("Agent completed")

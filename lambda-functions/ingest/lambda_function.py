@@ -88,7 +88,7 @@ def lambda_handler(event, context):
         item = json.loads(json.dumps(item), parse_float=Decimal)
         table.put_item(Item=item)
         
-        print(f"✅ Ingested data for {hostname} (score: {security_score}%)")
+        print(f"Ingested data for {hostname} (score: {security_score}%)")
         
         return {
             'statusCode': 200,
@@ -104,7 +104,7 @@ def lambda_handler(event, context):
         }
         
     except json.JSONDecodeError as e:
-        print(f"❌ JSON error: {e}")
+        print(f"JSON error: {e}")
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -112,7 +112,7 @@ def lambda_handler(event, context):
         }
     
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
         

@@ -50,7 +50,7 @@ def lambda_handler(event, context):
         
         hosts.sort(key=lambda x: x.get('hostname', ''))
         
-        print(f"✅ Retrieved {len(hosts)} hosts")
+        print(f"Retrieved {len(hosts)} hosts")
         
         return {
             'statusCode': 200,
@@ -59,7 +59,7 @@ def lambda_handler(event, context):
         }
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
         
