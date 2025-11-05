@@ -111,7 +111,7 @@ def check_root_login():
             "evidence": f"SSH config not found at {config_file}"
         }
     
-    output, _ = _run_shell_command(f"grep -Ei '^\s*PermitRootLogin' {config_file}")
+    output, _ = _run_shell_command(f"grep -Ei '^\\s*PermitRootLogin' {config_file}")
     
     if output and "yes" in output.lower():
         return {

@@ -104,15 +104,16 @@ def lambda_handler(event, context):
         
         print(f"Ingested data for {hostname} (score: {security_score}%)")
         
+        # Ensure values are int for JSON response
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({
                 'status': 'success',
                 'hostname': hostname,
-                'security_score': security_score,
-                'passed_checks': passed_checks,
-                'total_checks': total_checks,
+                'security_score': int(security_score),
+                'passed_checks': int(passed_checks),
+                'total_checks': int(total_checks),
                 'timestamp': datetime.utcnow().isoformat()
             })
         }

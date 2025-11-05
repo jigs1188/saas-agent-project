@@ -1,9 +1,24 @@
 
 {% extends "base.html" %}
 
-{% block title %}{{ host.host_details.hostname }} - Host Details{% endblock %}
+{% block title %}{{ host.hostname if aws_mode else host.host_details.hostname }} - Host Details{% endblock %}
 
 {% block content %}
+
+{# Set variables based on mode #}
+{% if aws_mode %}
+    {% set hostname = host.hostname %}
+    {% set os_type = host.host_details.os_type %}
+    {% set os_version = host.host_details.os_version %}
+    {% set installed_packages = host.installed_packages %}
+    {% set cis_results = host.cis_results %}
+{% else %}
+    {% set hostname = host.host_details.hostname %}
+    {% set os_type = host.host_details.os_type %}
+    {% set os_version = host.host_details.os_version %}
+    {% set installed_packages = host.installed_packages %}
+    {% set cis_results = host.cis_results %}
+{% endif %}
 
 <!-- Breadcrumb -->
 <nav class="flex mb-6 fade-in" aria-label="Breadcrumb">
@@ -17,7 +32,7 @@
         <li>
             <div class="flex items-center">
                 <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                <span class="text-gray-500 font-medium">{{ host.host_details.hostname }}</span>
+                <span class="text-gray-500 font-medium">{{ hostname }}</span>
             </div>
         </li>
     </ol>
@@ -32,10 +47,10 @@
                     <i class="fas fa-server text-3xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-4xl font-bold">{{ host.host_details.hostname }}</h1>
+                    <h1 class="text-4xl font-bold">{{ hostname }}</h1>
                     <p class="text-indigo-100 mt-1">
-                        <i class="fas fa-{{ 'linux' if 'Linux' in host.host_details.os_type else 'question' }} mr-2"></i>
-                        {{ host.host_details.os_type }} {{ host.host_details.os_version }}
+                        <i class="fas fa-{{ 'linux' if 'Linux' in os_type else 'question' }} mr-2"></i>
+                        {{ os_type }} {{ os_version }}
                     </p>
                 </div>
             </div>
@@ -125,7 +140,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-gray-500 text-sm font-medium uppercase mb-1">Packages</p>
-                <h3 class="text-4xl font-bold text-indigo-600">{{ host.installed_packages|length }}</h3>
+                <h3 class="text-4xl font-bold text-indigo-600">{{ installed_packages|length }}</h3>
                 <p class="text-gray-600 text-sm mt-2">installed</p>
             </div>
             <div class="gradient-blue p-4 rounded-full">
@@ -166,7 +181,7 @@
     <!-- Checks List -->
     <div class="p-6">
         <div class="space-y-4" id="checksContainer">
-            {% for result in host.cis_results %}
+            {% for result in cis_results %}
             <div class="check-item border-2 {% if result.status == 'pass' %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %} rounded-xl p-5 transition-all hover:shadow-md" data-status="{{ result.status }}">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -240,7 +255,7 @@
                     Installed Packages
                 </h2>
                 <p class="text-gray-600 text-sm mt-1">
-                    {{ host.installed_packages|length }} packages currently installed
+                    {{ installed_packages|length }} packages currently installed
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -270,7 +285,7 @@
                 </tr>
             </thead>
             <tbody id="packageTableBody" class="bg-white divide-y divide-gray-200">
-                {% for pkg in host.installed_packages %}
+                {% for pkg in installed_packages %}
                 <tr class="hover:bg-gray-50 transition package-row">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">

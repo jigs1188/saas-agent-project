@@ -82,16 +82,8 @@ The deployment script performs the following operations:
 - Outputs configuration for agent deployment
 
 ### Agent Installation
-```
 
-This script automatically:
-- Creates DynamoDB table
-- Deploys 4 Lambda functions
-- Sets up API Gateway
-- Generates API key
-- Outputs your configuration
-
-### 2. Run the Agent
+After AWS deployment completes, configure and run the agent:
 
 ```bash
 # Configure environment variables from deployment output
@@ -103,7 +95,13 @@ cd saas_project/agent
 sudo -E python3 agent.py
 ```
 
-### Verification
+**Note:** The `-E` flag preserves environment variables when running with sudo.
+
+### Viewing Results
+
+**Option 1: Direct API Queries**
+
+**Option 1: Direct API Queries**
 
 ```bash
 # Retrieve all monitored hosts
@@ -112,11 +110,30 @@ curl "https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod/hosts"
 # View aggregated security results
 curl "https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod/cis-results"
 
+# Get specific host details
+curl "https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod/hosts/[hostname]"
+
 # Check DynamoDB data
 aws dynamodb scan --table-name saas-hosts --region us-east-1
 ```
 
-Access AWS Console for detailed monitoring:
+**Option 2: Web Dashboard (Recommended)**
+
+Run the local backend in AWS mode to view data in a beautiful web interface:
+
+```bash
+cd saas_project/backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+export AWS_API_ENDPOINT="https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod"
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Open browser: http://localhost:8000
+```
+
+The dashboard will fetch and display all data from AWS in real-time.
+
+**AWS Console Access:**
 - **DynamoDB**: `https://console.aws.amazon.com/dynamodbv2`
 - **Lambda**: `https://console.aws.amazon.com/lambda`
 - **API Gateway**: `https://console.aws.amazon.com/apigateway`
@@ -182,20 +199,50 @@ This represents an 87% cost reduction compared to traditional EC2-based approach
 
 For local testing without AWS deployment:
 
+### Option 1: Local Mode (Agent sends data to local backend)
+
 ```bash
-# Terminal 1: Start local backend
+# Terminal 1: Start local backend in local mode
 cd saas_project/backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Terminal 2: Run agent locally
 cd saas_project/agent
 export BACKEND_URL="http://127.0.0.1:8000/ingest"
+unset API_GATEWAY_ENDPOINT  # Disable AWS mode
 sudo -E python3 agent.py
 
 # Access dashboard at http://127.0.0.1:8000
+# Dashboard displays data from local in-memory storage
 ```
+
+### Option 2: AWS Dashboard Mode (View AWS data in local dashboard)
+
+```bash
+# Terminal 1: Start local backend in AWS mode
+cd saas_project/backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+export AWS_API_ENDPOINT="https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod"
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2: Run agent to AWS (optional)
+cd saas_project/agent
+export API_GATEWAY_ENDPOINT="https://[your-api-id].execute-api.us-east-1.amazonaws.com/prod"
+export API_KEY="[your-api-key]"
+sudo -E python3 agent.py
+
+# Access dashboard at http://127.0.0.1:8000
+# Dashboard displays data fetched from AWS DynamoDB via API Gateway
+```
+
+**Key Difference:**
+- **Local Mode**: Agent → Local Backend (in-memory storage) → Dashboard
+- **AWS Mode**: Agent → AWS API Gateway → DynamoDB, Dashboard → AWS API Gateway → Display data
+
+The backend automatically detects the mode based on the `AWS_API_ENDPOINT` environment variable.
 
 ## Testing Procedures
 
@@ -221,6 +268,13 @@ aws dynamodb scan --table-name saas-hosts --region us-east-1
 - Root/sudo privileges (for security checks)
 - Supported distributions: Ubuntu, Debian, RHEL, CentOS, Alpine
 
+**Backend Dashboard Requirements:**
+- Python 3.7 or higher
+- FastAPI framework
+- Uvicorn ASGI server
+- Jinja2 templating engine
+- `requests` library (for AWS mode)
+
 **AWS Deployment:**
 - AWS account with appropriate IAM permissions
 - AWS CLI configured
@@ -238,6 +292,7 @@ aws dynamodb scan --table-name saas-hosts --region us-east-1
 - CIS benchmark implementation
 - HTTPS communication with retry logic
 - JSON payload formatting
+- Supports both local backend and AWS API Gateway
 
 **Cloud Architecture:**
 - RESTful API design
@@ -245,6 +300,13 @@ aws dynamodb scan --table-name saas-hosts --region us-east-1
 - NoSQL data storage with DynamoDB
 - API key-based authentication
 - CloudWatch monitoring and logging
+
+**Dashboard Architecture:**
+- FastAPI backend with dual-mode support (local/AWS)
+- Dynamic data fetching from AWS API Gateway
+- Real-time visualization with modern UI
+- Responsive design with TailwindCSS
+- Auto-detection of data source mode
 
 ## License
 

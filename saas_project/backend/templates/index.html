@@ -123,7 +123,19 @@
         <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for host in hosts %}
-                <a href="/hosts/{{ host }}" class="block">
+                {% if aws_mode %}
+                    {% set hostname = host.hostname %}
+                    {% set os_type = host.os_type or 'Linux' %}
+                    {% set security_score = host.security_score or 0 %}
+                    {% set total_checks = host.total_checks or 0 %}
+                {% else %}
+                    {% set hostname = host.hostname if host is mapping else host %}
+                    {% set os_type = 'Linux' %}
+                    {% set security_score = 0 %}
+                    {% set total_checks = 0 %}
+                {% endif %}
+                
+                <a href="/hosts/{{ hostname }}" class="block">
                     <div class="bg-gradient-to-br from-white to-gray-50 rounded-xl border-2 border-gray-200 hover:border-indigo-500 p-6 card-hover transition-all duration-300">
                         <div class="flex items-start justify-between mb-4">
                             <div class="gradient-blue p-3 rounded-lg">
@@ -136,13 +148,13 @@
                         </div>
                         
                         <h3 class="text-xl font-bold text-gray-800 mb-2">
-                            {{ host }}
+                            {{ hostname }}
                         </h3>
                         
                         <div class="space-y-2 mb-4">
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-linux w-5 mr-2 text-gray-400"></i>
-                                <span>Linux System</span>
+                                <span>{{ os_type }}</span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-clock w-5 mr-2 text-gray-400"></i>
@@ -150,7 +162,7 @@
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-shield-alt w-5 mr-2 text-gray-400"></i>
-                                <span>10 Security Checks</span>
+                                <span>{{ total_checks }} Security Checks</span>
                             </div>
                         </div>
                         
@@ -158,10 +170,10 @@
                         <div class="mb-3">
                             <div class="flex justify-between text-sm mb-1">
                                 <span class="text-gray-600 font-medium">Security Score</span>
-                                <span class="font-bold text-indigo-600">85%</span>
+                                <span class="font-bold text-indigo-600">{{ security_score }}%</span>
                             </div>
                             <div class="progress-bar">
-                                <div class="progress-bar-fill gradient-blue" style="width: 85%"></div>
+                                <div class="progress-bar-fill gradient-blue" style="width: {{ security_score }}%"></div>
                             </div>
                         </div>
                         
