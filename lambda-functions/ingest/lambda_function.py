@@ -12,6 +12,14 @@ dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('REGION', 'us-e
 table = dynamodb.Table(os.environ.get('TABLE_NAME', 'saas-hosts'))
 
 
+class DecimalEncoder(json.JSONEncoder):
+    """Convert Decimal to int/float for JSON"""
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+
 def lambda_handler(event, context):
     print(f"Received event: {json.dumps(event)}")
     
@@ -57,7 +65,13 @@ def lambda_handler(event, context):
         try:
             response = table.get_item(Key={'hostname': hostname})
             existing_item = response.get('Item')
-            first_seen = existing_item.get('metadata', {}).get('first_seen', current_timestamp) if existing_item else current_timestamp
+            if existing_item:
+                first_seen = existing_item.get('metadata', {}).get('first_seen', current_timestamp)
+                # Convert Decimal to int if needed
+                if isinstance(first_seen, Decimal):
+                    first_seen = int(first_seen)
+            else:
+                first_seen = current_timestamp
         except Exception as e:
             print(f"Error checking existing item: {e}")
             first_seen = current_timestamp
